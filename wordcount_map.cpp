@@ -7,7 +7,9 @@ int main() {
     size_t cur_space, prev_space = line.find('\t');
     while (prev_space != std::string::npos) {
       cur_space = line.find(' ', prev_space + 1);
-      std::cout << line.substr(prev_space + 1, cur_space - prev_space - 1) << "\t1" << std::endl;
+      if (prev_space + 1 != cur_space && prev_space + 1 != line.size()) {
+        std::cout << line.substr(prev_space + 1, cur_space - prev_space - 1) << "\t1" << std::endl;
+      }
       prev_space = cur_space;
     }
   }
