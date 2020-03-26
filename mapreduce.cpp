@@ -1,4 +1,5 @@
 #include "include/process.h"
+#include "include/tmpdir.h"
 #include <cstring>
 #include <string>
 #include <thread>
@@ -25,21 +26,10 @@ int main(int argc, char** argv) {
       return 1;
     }
   } else if (!strcmp(argv[1], "reduce")) {
-    // TODO make separate class for tmpdir
-    std::string tmpdir_name = "mr_tmp";
-    while (std::filesystem::exists(tmpdir_name)) {
-      tmpdir_name += '_';
-    }
-    std::filesystem::path tmpdir(tmpdir_name);
-    if (!std::filesystem::create_directory(tmpdir)) {
-      std::cerr << "failed to create directory " << tmpdir << std::endl;
-      return 1;
-    }
-
+    TmpDir tmpdir("mr_tmp");
     std::ifstream fin(argv[3]);
     if (!fin.is_open()) {
       std::cerr << "failed to open " << argv[3] << std::endl;
-      std::filesystem::remove_all(tmpdir);
       return 1;
     }
     std::hash<std::string> hasher;
@@ -60,11 +50,10 @@ int main(int argc, char** argv) {
       } else {
         coll_num = it - colls.begin();
       }
-      std::string fname_in = tmpdir / (std::to_string(hash) + "_" + std::to_string(coll_num) + "_in");
+      std::string fname_in = tmpdir.GetPath() / (std::to_string(hash) + "_" + std::to_string(coll_num) + "_in");
       std::ofstream fout(fname_in, std::ios_base::out | std::ios_base::app);
       if (!fout.is_open()) {
         std::cerr << "failed to open " << fname_in << std::endl;
-        std::filesystem::remove_all(tmpdir);
         return 1;
       }
       fout << line << std::endl;
@@ -75,7 +64,7 @@ int main(int argc, char** argv) {
     std::vector<std::unique_ptr<Process>> reducers;
     for (const auto& kv : hashmap) {
       for (size_t i = 0; i < kv.second.size(); i++) {
-        std::string fname_base = tmpdir / (std::to_string(kv.first) + "_" + std::to_string(i) + "_");
+        std::string fname_base = tmpdir.GetPath() / (std::to_string(kv.first) + "_" + std::to_string(i) + "_");
         reducers.push_back(Process::Create(argv[2]));
         reducers.back()->SetInput(fname_base + "in");
         reducers.back()->SetOutput(fname_base + "out");
@@ -90,18 +79,16 @@ int main(int argc, char** argv) {
     }
     if (!good) {
       std::cerr << "at least one reducer has failed" << std::endl;
-      std::filesystem::remove_all(tmpdir);
       return 1;
     }
     std::ofstream fout(argv[4]);
     if (!fout.is_open()) {
       std::cerr << "failed to open " << argv[4] << std::endl;
-      std::filesystem::remove_all(tmpdir);
       return 1;
     }
     for (const auto& kv : hashmap) {
       for (size_t i = 0; i < kv.second.size(); i++) {
-        fin.open(tmpdir / (std::to_string(kv.first) + "_" + std::to_string(i) + "_out"));
+        fin.open(tmpdir.GetPath() / (std::to_string(kv.first) + "_" + std::to_string(i) + "_out"));
         while (getline(fin, line)) {
           fout << line << std::endl;
         }
@@ -109,7 +96,6 @@ int main(int argc, char** argv) {
       }
     }
     fout.close();
-    std::filesystem::remove_all(tmpdir);
     return 0;
   } else {
     std::cerr << "unknown mode: " << argv[1] << std::endl;
