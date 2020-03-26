@@ -1,15 +1,16 @@
-#include "include/process.h"
-#include <vector>
-#include <optional>
-#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <cstring>
+#include <vector>
+#include <optional>
+#include "include/process.h"
 
 class ProcessUnix : public Process {
  public:
-  ProcessUnix(const std::string& path) : exec_path_(path), args_(), input_(), output_(), pid_(0), state_(0) {}
+  explicit ProcessUnix(const std::string& path) :
+      exec_path_(path), args_(), input_(), output_(), pid_(0), state_(0) {}
 
   void Run() override {
     if (state_ != 0) {
@@ -20,7 +21,7 @@ class ProcessUnix : public Process {
       throw std::runtime_error("fork() failed");
     }
     if (res == 0) {
-      // TODO is this safe?
+      // TODO(xtsm) is this safe?
       std::vector<char*> argv;
       argv.push_back(exec_path_.data());
       for (auto& arg : args_) {
@@ -81,10 +82,14 @@ class ProcessUnix : public Process {
     if (state_ == 0) {
       throw std::runtime_error("process wasn't started");
     }
-    // TODO is it ok?
+    // TODO(xtsm) is it ok?
     state_ = 2;
     int status;
-    return (waitpid(pid_, &status, 0) >= 0 && WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+    if (waitpid(pid_, &status, 0) >= 0 && WIFEXITED(status)) {
+      return WEXITSTATUS(status);
+    } else {
+      return -1;
+    }
   }
 
   ~ProcessUnix() {
@@ -92,6 +97,7 @@ class ProcessUnix : public Process {
       kill(pid_, SIGKILL);
     }
   }
+
  private:
   std::string exec_path_;
   std::vector<std::string> args_;

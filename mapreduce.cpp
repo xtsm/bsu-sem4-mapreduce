@@ -1,5 +1,3 @@
-#include "include/process.h"
-#include "include/tmpdir.h"
 #include <cstring>
 #include <string>
 #include <thread>
@@ -8,10 +6,13 @@
 #include <fstream>
 #include <algorithm>
 #include <unordered_map>
+#include "include/process.h"
+#include "include/tmpdir.h"
 
 int main(int argc, char** argv) {
   if (argc != 5) {
-    std::cerr << "Usage: " << argv[0] << " <map|reduce> <exec> <input> <output>" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " <map|reduce> <exec> <input> <output>"
+        << std::endl;
     return 1;
   }
   if (!strcmp(argv[1], "map")) {
@@ -50,7 +51,8 @@ int main(int argc, char** argv) {
       } else {
         coll_num = it - colls.begin();
       }
-      std::string fname_in = tmpdir.GetPath() / (std::to_string(hash) + "_" + std::to_string(coll_num) + "_in");
+      std::string fname_in = tmpdir.GetPath() / (std::to_string(hash) + "_"
+          + std::to_string(coll_num) + "_in");
       std::ofstream fout(fname_in, std::ios_base::out | std::ios_base::app);
       if (!fout.is_open()) {
         std::cerr << "failed to open " << fname_in << std::endl;
@@ -64,7 +66,8 @@ int main(int argc, char** argv) {
     std::vector<std::unique_ptr<Process>> reducers;
     for (const auto& kv : hashmap) {
       for (size_t i = 0; i < kv.second.size(); i++) {
-        std::string fname_base = tmpdir.GetPath() / (std::to_string(kv.first) + "_" + std::to_string(i) + "_");
+        std::string fname_base = tmpdir.GetPath() / (std::to_string(kv.first)
+            + "_" + std::to_string(i) + "_");
         reducers.push_back(Process::Create(argv[2]));
         reducers.back()->SetInput(fname_base + "in");
         reducers.back()->SetOutput(fname_base + "out");
@@ -88,7 +91,8 @@ int main(int argc, char** argv) {
     }
     for (const auto& kv : hashmap) {
       for (size_t i = 0; i < kv.second.size(); i++) {
-        fin.open(tmpdir.GetPath() / (std::to_string(kv.first) + "_" + std::to_string(i) + "_out"));
+        fin.open(tmpdir.GetPath() / (std::to_string(kv.first) + "_"
+            + std::to_string(i) + "_out"));
         while (getline(fin, line)) {
           fout << line << std::endl;
         }

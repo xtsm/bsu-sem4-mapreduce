@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <memory>
 #include <vector>
+#include <string>
 
 class Process {
  public:
@@ -22,6 +23,6 @@ class Process {
   static std::unique_ptr<Process> Create(const std::filesystem::path& path);
 
   Process& operator=(const Process& p) = delete;
-  
+
   Process(const Process& p) = delete;
 };
