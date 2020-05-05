@@ -118,10 +118,14 @@ class ProcessUnix : public Process {
     if (state_ != ProcessState::RUNNING) {
       throw std::runtime_error("process isn't running");
     }
-    // TODO(xtsm) is it ok?
     state_ = ProcessState::TERMINATED;
     int status;
-    if (waitpid(pid_, &status, 0) >= 0 && WIFEXITED(status)) {
+    while (waitpid(pid_, &status, 0) < 0) {
+      if (errno != EINTR) {
+        throw std::runtime_error(strerror(errno));
+      }
+    }
+    if (WIFEXITED(status)) {
       return WEXITSTATUS(status);
     } else {
       return -1;
