@@ -23,18 +23,18 @@ class ProcessUnix : public Process {
     if (state_ != ProcessState::CREATED) {
       throw std::runtime_error("can't run twice");
     }
-    int fd[2];
-    if (pipe2(fd, O_CLOEXEC) < 0) {
+    int pipefd[2];
+    if (pipe2(pipefd, O_CLOEXEC) < 0) {
       throw std::runtime_error("pipe2() failed");
     }
     pid_t res = fork();
     if (res < 0) {
-      close(fd[0]);
-      close(fd[1]);
+      close(pipefd[0]);
+      close(pipefd[1]);
       throw std::runtime_error("fork() failed");
     }
     if (res == 0) {
-      close(fd[0]);
+      close(pipefd[0]);
       try {
         std::vector<char*> argv;
         argv.push_back(exec_.data());
@@ -50,7 +50,9 @@ class ProcessUnix : public Process {
             ss << "opening \"" << *input_ << "\" for read failed";
             throw std::runtime_error(ss.str());
           }
-          if (dup2(fd, STDIN_FILENO) < 0) {
+          int ret = dup2(fd, STDIN_FILENO);
+          close(fd);
+          if (ret < 0) {
             throw std::runtime_error("dup2() for stdin failed");
           }
         }
@@ -62,7 +64,9 @@ class ProcessUnix : public Process {
             ss << "opening \"" << *output_ << "\" for write failed";
             throw std::runtime_error(ss.str());
           }
-          if (dup2(fd, STDOUT_FILENO) < 0) {
+          int ret = dup2(fd, STDOUT_FILENO);
+          close(fd);
+          if (ret < 0) {
             throw std::runtime_error("dup2() for stdout failed");
           }
         }
@@ -70,20 +74,20 @@ class ProcessUnix : public Process {
         execvp(exec_.c_str(), argv.data());
         throw std::runtime_error("execvp() failed");
       } catch (const std::exception& e) {
-        write(fd[1], e.what(), strlen(e.what()) + 1);
-        close(fd[1]);
+        write(pipefd[1], e.what(), strlen(e.what()));
+        close(pipefd[1]);
         _exit(0);
       }
     } else {
       pid_ = res;
-      close(fd[1]);
+      close(pipefd[1]);
       std::vector<char> buf(256);
       std::string exc_msg;
       int cnt;
-      while ((cnt = read(fd[0], buf.data(), buf.size())) > 0) {
+      while ((cnt = read(pipefd[0], buf.data(), buf.size())) > 0) {
         exc_msg.append(buf.begin(), buf.begin() + cnt);
       }
-      close(fd[0]);
+      close(pipefd[0]);
       if (!exc_msg.empty()) {
         std::ostringstream s;
         s << "failed to create process: " << exc_msg;
