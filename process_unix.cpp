@@ -7,13 +7,19 @@
 #include <optional>
 #include "include/process.h"
 
+enum class ProcessState {
+  CREATED,
+  RUNNING,
+  TERMINATED,
+};
+
 class ProcessUnix : public Process {
  public:
-  explicit ProcessUnix(const std::string& path) :
-      exec_path_(path), args_(), input_(), output_(), pid_(0), state_(0) {}
+  explicit ProcessUnix(const std::string& exec) :
+      exec_(exec), args_(), input_(), output_(), pid_(0), state_(ProcessState::CREATED) {}
 
   void Run() override {
-    if (state_ != 0) {
+    if (state_ != ProcessState::CREATED) {
       throw std::runtime_error("can't run twice");
     }
     pid_t res = fork();
@@ -21,9 +27,8 @@ class ProcessUnix : public Process {
       throw std::runtime_error("fork() failed");
     }
     if (res == 0) {
-      // TODO(xtsm) is this safe?
       std::vector<char*> argv;
-      argv.push_back(exec_path_.data());
+      argv.push_back(exec_.data());
       for (auto& arg : args_) {
         argv.push_back(arg.data());
       }
@@ -53,37 +58,37 @@ class ProcessUnix : public Process {
         }
       }
 
-      execv(exec_path_.c_str(), argv.data());
+      execvp(exec_.c_str(), argv.data());
       _exit(1);
     } else {
       pid_ = res;
-      state_ = 1;
+      state_ = ProcessState::RUNNING;
     }
   }
   void SetArguments(const std::vector<std::string>& args) override {
-    if (state_ != 0) {
+    if (state_ != ProcessState::CREATED) {
       throw std::runtime_error("can't change args after start");
     }
     args_ = args;
   }
   void SetInput(const std::filesystem::path& path) override {
-    if (state_ != 0) {
+    if (state_ != ProcessState::CREATED) {
       throw std::runtime_error("can't change input after start");
     }
     input_ = path;
   }
   void SetOutput(const std::filesystem::path& path) override {
-    if (state_ != 0) {
+    if (state_ != ProcessState::CREATED) {
       throw std::runtime_error("can't change output after start");
     }
     output_ = path;
   }
   int Wait() override {
-    if (state_ == 0) {
-      throw std::runtime_error("process wasn't started");
+    if (state_ != ProcessState::RUNNING) {
+      throw std::runtime_error("process isn't running");
     }
     // TODO(xtsm) is it ok?
-    state_ = 2;
+    state_ = ProcessState::TERMINATED;
     int status;
     if (waitpid(pid_, &status, 0) >= 0 && WIFEXITED(status)) {
       return WEXITSTATUS(status);
@@ -93,18 +98,18 @@ class ProcessUnix : public Process {
   }
 
   ~ProcessUnix() {
-    if (state_ == 1) {
-      kill(pid_, SIGKILL);
+    if (state_ == ProcessState::RUNNING) {
+      kill(pid_, SIGTERM);
     }
   }
 
  private:
-  std::string exec_path_;
+  std::string exec_;
   std::vector<std::string> args_;
   std::optional<std::string> input_;
   std::optional<std::string> output_;
   pid_t pid_;
-  uint8_t state_;
+  ProcessState state_;
 };
 
 std::unique_ptr<Process> Process::Create(const std::filesystem::path& path) {
