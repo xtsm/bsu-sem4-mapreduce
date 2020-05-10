@@ -15,5 +15,7 @@ do
   ./build/mapreduce reduce ./build/wordcount_reduce medium.txt output.txt
   diff <(sort medium.txt) <(sort data/medium$i.txt)
   diff <(sort output.txt) <(sort data/output$i.txt)
+  rm medium.txt
+  rm output.txt
   let i+=1
 done
