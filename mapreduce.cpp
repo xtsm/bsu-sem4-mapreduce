@@ -91,11 +91,11 @@ int main(int argc, char** argv) {
     }
   } else if (!strcmp(argv[1], "reduce")) {
     TmpDir tmpdir("mr_tmp");
-    std::unordered_map<size_t, std::vector<std::string>> hashmap;
-    SplitReduceInput(argv[3], tmpdir.GetPath(), hashmap);
+    std::unordered_map<size_t, std::vector<std::string>> key_hashmap;
+    SplitReduceInput(argv[3], tmpdir.GetPath(), key_hashmap);
 
     std::vector<std::unique_ptr<Process>> reducers;
-    for (const auto& kv : hashmap) {
+    for (const auto& kv : key_hashmap) {
       for (size_t i = 0; i < kv.second.size(); i++) {
         std::string fname_base = tmpdir.GetPath() / (std::to_string(kv.first)
             + "_" + std::to_string(i) + "_");
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    MergeReduceOutput(argv[4], tmpdir.GetPath(), hashmap);
+    MergeReduceOutput(argv[4], tmpdir.GetPath(), key_hashmap);
     return 0;
   } else {
     std::cerr << "unknown mode: " << argv[1] << std::endl;
