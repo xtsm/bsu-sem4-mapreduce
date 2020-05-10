@@ -10,6 +10,9 @@ class Process {
 
   virtual void Run() = 0;
 
+  void Run(const std::filesystem::path& input,
+      const std::filesystem::path& output);
+
   virtual void SetArguments(const std::vector<std::string>& args) = 0;
 
   virtual void SetInput(const std::filesystem::path& path) = 0;
