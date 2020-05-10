@@ -1,17 +1,15 @@
 #include <iostream>
+#include <sstream>
 #include <string>
 
 int main() {
   std::string line;
   while (std::getline(std::cin, line)) {
-    size_t cur_space, prev_space = line.find('\t');
-    while (prev_space != std::string::npos) {
-      cur_space = line.find(' ', prev_space + 1);
-      if (prev_space + 1 != cur_space && prev_space + 1 != line.size()) {
-        std::cout << line.substr(prev_space + 1, cur_space - prev_space - 1)
-            << "\t1" << std::endl;
-      }
-      prev_space = cur_space;
+    line.erase(line.begin(), line.begin() + line.find('\t') + 1);
+    std::istringstream keys_stream(line);
+    std::string key;
+    while (keys_stream >> key) {
+        std::cout << key << "\t1" << std::endl;
     }
   }
   return 0;
