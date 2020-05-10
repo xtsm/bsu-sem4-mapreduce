@@ -22,6 +22,8 @@ int main() {
   }
   if (key.has_value()) {
     std::cout << *key << '\t' << sum << std::endl;
+  } else {
+    std::cerr << "warning: input is empty" << std::endl;
   }
   return 0;
 }
