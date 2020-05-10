@@ -1,10 +1,10 @@
+#include <algorithm>
+#include <chrono>
 #include <cstring>
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <thread>
-#include <chrono>
-#include <iostream>
-#include <fstream>
-#include <algorithm>
 #include <unordered_map>
 #include "include/process.h"
 #include "include/tmpdir.h"
@@ -74,13 +74,13 @@ int main(int argc, char** argv) {
         reducers.back()->Run();
       }
     }
-    bool good = true;
+    bool is_success_for_all = true;
     for (auto& reducer : reducers) {
       if (reducer->Wait() != 0) {
-        good = false;
+        is_success_for_all = false;
       }
     }
-    if (!good) {
+    if (!is_success_for_all) {
       std::cerr << "at least one reducer has failed" << std::endl;
       return 1;
     }

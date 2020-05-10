@@ -15,7 +15,8 @@ int main() {
       key = new_key;
     } else if (*key != new_key) {
       std::ostringstream ss;
-      ss << "got different keys in input: \"" << *key << "\", \"" << new_key << "\"";
+      ss << "got different keys in input: \"" << *key <<
+          "\", \"" << new_key << "\"";
       throw std::runtime_error(ss.str());
     }
     sum += count;
