@@ -1,15 +1,18 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include "include/key_value.h"
 
 int main() {
   std::string line;
-  while (std::getline(std::cin, line)) {
-    line.erase(line.begin(), line.begin() + line.find('\t') + 1);
-    std::istringstream keys_stream(line);
-    std::string key;
-    while (keys_stream >> key) {
-        std::cout << key << "\t1" << std::endl;
+  TsvKeyValue kv;
+  while (std::cin >> kv) {
+    kv.key.clear();
+    std::istringstream new_keys_stream(std::move(kv.value));
+    std::string new_key;
+    while (new_keys_stream >> new_key) {
+      TsvKeyValue new_kv(new_key, "1");
+      std::cout << new_kv << std::endl;
     }
   }
   return 0;

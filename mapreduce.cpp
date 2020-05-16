@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include "include/process.h"
 #include "include/tmpdir.h"
+#include "include/key_value.h"
 
 void SplitReduceInput(const std::filesystem::path& inpath,
     const std::filesystem::path& dirpath,
@@ -19,19 +20,14 @@ void SplitReduceInput(const std::filesystem::path& inpath,
     throw std::runtime_error(ss.str());
   }
   std::hash<std::string> hasher;
-  std::string line;
-  while (getline(fin, line)) {
-    size_t tab_pos = line.find('\t');
-    if (tab_pos == std::string::npos) {
-      continue;
-    }
-    std::string key = line.substr(0, tab_pos);
-    size_t hash = hasher(key);
+  TsvKeyValue kv;
+  while (fin >> kv) {
+    size_t hash = hasher(kv.key);
     auto& colls = hashmap[hash];
     size_t coll_num = colls.size();
-    auto it = std::find(colls.begin(), colls.end(), key);
+    auto it = std::find(colls.begin(), colls.end(), kv.key);
     if (it == colls.end()) {
-      colls.push_back(key);
+      colls.push_back(kv.key);
     } else {
       coll_num = it - colls.begin();
     }
@@ -43,7 +39,7 @@ void SplitReduceInput(const std::filesystem::path& inpath,
       ss << "failed to open " << fname_in;
       throw std::runtime_error(ss.str());
     }
-    fout << line << std::endl;
+    fout << kv << std::endl;
     fout.close();
   }
   fin.close();
@@ -78,7 +74,11 @@ int main(int argc, char** argv) {
         << std::endl;
     return 1;
   }
-  if (!strcmp(argv[1], "map")) {
+  std::string mr_mode(argv[1]);
+  std::string mr_exec(argv[2]);
+  std::filesystem::path infile(argv[3]);
+  std::filesystem::path outfile(argv[4]);
+  if (mr_mode == "map") {
     auto p = Process::Create(argv[2]);
     p->SetInput(argv[3]);
     p->SetOutput(argv[4]);
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
       std::cerr << "mapper has failed" << std::endl;
       return 1;
     }
-  } else if (!strcmp(argv[1], "reduce")) {
+  } else if (mr_mode == "reduce") {
     TmpDir tmpdir("mr_tmp");
     std::unordered_map<size_t, std::vector<std::string>> key_hashmap;
     SplitReduceInput(argv[3], tmpdir.GetPath(), key_hashmap);
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
     MergeReduceOutput(argv[4], tmpdir.GetPath(), key_hashmap);
     return 0;
   } else {
-    std::cerr << "unknown mode: " << argv[1] << std::endl;
+    std::cerr << "unknown mode: " << mr_mode << std::endl;
     return 1;
   }
 
