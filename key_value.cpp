@@ -16,18 +16,13 @@ std::istream& operator>>(std::istream& s, TsvKeyValue& key_value) {
   std::string line, key_str, value_str;
   std::getline(s, line);
   if (s) {
-    std::istringstream sstream(std::move(line));
-    std::getline(sstream, key_value.key, '\t');
-    if (!sstream) {
-      throw std::runtime_error("could not extract key from TSV line");
+    size_t first_tab_pos = line.find('\t');
+    size_t second_tab_pos = line.find('\t', first_tab_pos + 1);
+    if (first_tab_pos == std::string::npos || second_tab_pos != std::string::npos) {
+      throw std::runtime_error("TSV key-value line must contain exactly two fields");
     }
-    std::getline(sstream, key_value.value, '\t');
-    if (!sstream) {
-      throw std::runtime_error("could not extract value from TSV line");
-    }
-    if (!sstream.eof()) {
-      throw std::runtime_error("excess TSV data after value");
-    }
+    key_value.key = line.substr(0, first_tab_pos);
+    key_value.value = line.substr(first_tab_pos + 1);
   }
   return s;
 }

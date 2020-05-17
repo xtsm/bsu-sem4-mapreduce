@@ -31,7 +31,7 @@ size_t SplitBySize(
   std::ifstream fin(infile);
   if (!fin.is_open()) {
     std::ostringstream err;
-    err << "failed to open " << infile << " for sorting";
+    err << "failed to open " << infile << " for splitting";
     throw std::runtime_error(err.str());
   }
   TsvKeyValue kv;
