@@ -68,13 +68,13 @@ size_t SplitBySize(
 
 // Reads `infile` and performs an external sort of its contents.
 // Writes results to `outfile`.
-// May create temporary entries in the `workdir`.
+// Splits data into chunks of `chunk_size_limit` in process and sorts them,
+// creates temporary entries in the `workdir` for that purpose.
 void ExternalSortByKey(
     const std::filesystem::path& infile,
     const std::filesystem::path& outfile,
-    const std::filesystem::path& workdir) {
-  // TODO(xtsm): change to something adaptive later
-  size_t chunk_size_limit = 64 << 20;
+    const std::filesystem::path& workdir,
+    size_t chunk_size_limit) {
   TmpDir chunks_dir(workdir / "sorted_chunks");
   TsvKeyValue kv;
 
@@ -157,12 +157,14 @@ size_t SplitByKey(
 
 // Runs `exec` processes for all `count` chunks from `indir`.
 // Writes corresponding chunks to `outdir`.
+// Runs at most `process_count` worker processes at a time.
 void RunForAllChunks(
     const std::string& exec,
     const std::filesystem::path& indir,
     const std::filesystem::path& outdir,
-    size_t count) {
-  ThreadPool pool;
+    size_t count,
+    size_t process_count) {
+  ThreadPool pool(process_count);
   bool all_exited_normally = true;
   std::mutex mutex;
   for (size_t i = 0; i < count; i++) {
@@ -201,52 +203,89 @@ void MergeChunks(
 
 void DoMap(const std::filesystem::path& infile,
     const std::filesystem::path& outfile,
-    const std::string& exec) {
-  // TODO(xtsm): change to something adaptive later
-  size_t chunk_size_limit = 64 << 20;
+    const std::string& exec,
+    size_t block_size,
+    size_t process_count) {
   TmpDir workdir("mr_tmp");
   TmpDir input_chunks(workdir.GetPath() / "input_chunks");
   size_t key_count = SplitBySize(infile, input_chunks.GetPath(),
-      chunk_size_limit);
+      block_size);
   TmpDir output_chunks(workdir.GetPath() / "output_chunks");
   RunForAllChunks(exec,
       input_chunks.GetPath(),
       output_chunks.GetPath(),
-      key_count);
+      key_count,
+      process_count);
   MergeChunks(output_chunks.GetPath(), outfile, key_count);
 }
 
 void DoReduce(const std::filesystem::path& infile,
     const std::filesystem::path& outfile,
-    const std::string& exec) {
+    const std::string& exec,
+    size_t block_size,
+    size_t process_count) {
   TmpDir workdir("mr_tmp");
   auto sorted_infile = workdir.GetPath() / "sorted_infile";
-  ExternalSortByKey(infile, sorted_infile, workdir.GetPath());
+  ExternalSortByKey(infile, sorted_infile, workdir.GetPath(), block_size);
   TmpDir input_chunks(workdir.GetPath() / "input_chunks");
   size_t key_count = SplitByKey(sorted_infile, input_chunks.GetPath());
   TmpDir output_chunks(workdir.GetPath() / "output_chunks");
   RunForAllChunks(exec,
       input_chunks.GetPath(),
       output_chunks.GetPath(),
-      key_count);
+      key_count,
+      process_count);
   MergeChunks(output_chunks.GetPath(), outfile, key_count);
 }
 
+void PrintUsageAndExit(const char* program_name) {
+  std::cerr << "Usage: " << program_name << " <map|reduce> <exec> <input> <output>"
+      << " [-p COUNT] [-s SIZE]" << std::endl
+      << "  -p COUNT   use at most COUNT parallel processes" << std::endl
+      << "  -s SIZE    split input into blocks of SIZE bytes" << std::endl;
+  exit(1);
+}
+
 int main(int argc, char** argv) {
-  if (argc != 5) {
-    std::cerr << "Usage: " << argv[0] << " <map|reduce> <exec> <input> <output>"
-        << std::endl;
-    return 1;
+  if (argc < 5) {
+    PrintUsageAndExit(argv[0]);
   }
   std::string mr_mode(argv[1]);
   std::string mr_exec(argv[2]);
   std::filesystem::path infile(argv[3]);
   std::filesystem::path outfile(argv[4]);
+  size_t process_count = std::thread::hardware_concurrency();
+  size_t block_size = 64 << 20;
+  for (int i = 5; i < argc; i++) {
+    if (!strcmp(argv[i], "-p")) {
+      ++i;
+      if (i == argc) {
+        PrintUsageAndExit(argv[0]);
+      }
+      char* err;
+      process_count = strtoul(argv[i], &err, 0);
+      if (*err) {
+        PrintUsageAndExit(argv[0]);
+      }
+    } else if (!strcmp(argv[i], "-s")) {
+      ++i;
+      if (i == argc) {
+        PrintUsageAndExit(argv[0]);
+      }
+      char* err;
+      block_size = strtoul(argv[i], &err, 0);
+      if (*err) {
+        PrintUsageAndExit(argv[0]);
+      }
+    } else {
+      PrintUsageAndExit(argv[0]);
+    }
+  }
   try {
     if (mr_mode == "map") {
-      DoMap(infile, outfile, mr_exec);
+      DoMap(infile, outfile, mr_exec, block_size, process_count);
     } else if (mr_mode == "reduce") {
-      DoReduce(infile, outfile, mr_exec);
+      DoReduce(infile, outfile, mr_exec, block_size, process_count);
     } else {
       throw std::runtime_error("unknown mode: " + mr_mode);
     }
