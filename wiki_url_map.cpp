@@ -35,7 +35,6 @@ int main() {
       try {
         std::stringstream stream;
         curl_easy_setopt(session, CURLOPT_URL, url_stream.str().data());
-        curl_easy_setopt(session, CURLOPT_TIMEOUT, 3);
         curl_easy_setopt(session, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
         curl_easy_setopt(session, CURLOPT_WRITEDATA, &stream);
         CURLcode result_code = curl_easy_perform(session);

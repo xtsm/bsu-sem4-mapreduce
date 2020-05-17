@@ -26,8 +26,8 @@ int main() {
     }
     if (!titles.empty()) {
       result.value.pop_back();
+      std::cout << result << std::endl;
     }
-    std::cout << result << std::endl;
     return 0;
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
