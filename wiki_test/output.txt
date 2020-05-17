@@ -1,9 +1,0 @@
-absent	Description
-command	Nerve#Raise
-council	Candy
-distributed	Candy
-fitted	Dream
-producing	Candy#Dream#Nerve#Song
-sol	Dream
-vital	Dream
-vol	Song#Dream#Candy
