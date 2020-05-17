@@ -20,9 +20,8 @@ do
   generate_urls 50 urls.txt
   generate_wordfilter 30 wordfilter.txt
   echo -n "running MR... "
-  ./mr.sh
+  ./mr.sh urls.txt wordfilter.txt output.txt
   echo "done, press any key to continue or q to quit"
   read -n 1 -r -s
-  rm urls.txt wordfilter.txt
   [ "$REPLY" = "q" ] && break
 done
