@@ -4,7 +4,7 @@
 
 class TmpDir {
  public:
-  explicit TmpDir(const std::string& prefix);
+  explicit TmpDir(const std::filesystem::path& prefix);
   std::filesystem::path GetPath() const;
   ~TmpDir();
  private:
