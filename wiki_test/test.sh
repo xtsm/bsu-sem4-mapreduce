@@ -7,10 +7,18 @@ cmake ../../
 make
 cd ../
 
+generate_urls() {
+  cat nouns.txt | shuf | head -$1 | sed "s/\(.*\)/https:\/\/en.wikipedia.org\/wiki\/\1\t/" > $2
+}
+
+generate_wordfilter() {
+  cat words.txt | shuf | head -$1 | sed "s/\(.*\)/\1\t/" > $2
+}
+
 while [ 1 = 1 ]
 do
-  cat nouns.txt | shuf | head -50 | sed "s/\(.*\)/https:\/\/en.wikipedia.org\/wiki\/\1\t/" > urls.txt
-  cat words.txt | shuf | head -30 | sed "s/\(.*\)/\1\t/" > wordfilter.txt
+  generate_urls 50 urls.txt
+  generate_wordfilter 30 wordfilter.txt
   echo -n "running MR... "
   ./mr.sh
   echo "done, press any key to continue or q to quit"
