@@ -9,6 +9,7 @@
 #include "include/process.h"
 #include "include/tmpdir.h"
 #include "include/key_value.h"
+#include "include/thread_pool.h"
 
 struct ExtSortElement {
   size_t chunk_number;
@@ -161,17 +162,23 @@ void RunForAllChunks(
     const std::filesystem::path& indir,
     const std::filesystem::path& outdir,
     size_t count) {
-  std::vector<std::unique_ptr<Process>> processes;
+  ThreadPool pool;
+  bool all_exited_normally = true;
+  std::mutex mutex;
   for (size_t i = 0; i < count; i++) {
-    processes.push_back(Process::Create(exec));
-    processes.back()->Run(
-        indir / std::to_string(i),
-        outdir / std::to_string(i));
+    pool.Run([&, i]() {
+      auto process = Process::Create(exec);
+      process->Run(
+          indir / std::to_string(i),
+          outdir / std::to_string(i));
+      auto retcode = process->Wait();
+      std::lock_guard<std::mutex> lock(mutex);
+      all_exited_normally &= retcode == 0;
+    });
   }
-  for (auto& process : processes) {
-    if (process->Wait() != 0) {
-      throw std::runtime_error("one of workers did not exit normally");
-    }
+  pool.WaitForAll();
+  if (!all_exited_normally) {
+    throw std::runtime_error("one of workers did not exit normally");
   }
 }
 
@@ -191,7 +198,6 @@ void MergeChunks(
   }
   fout.close();
 }
-
 
 void DoMap(const std::filesystem::path& infile,
     const std::filesystem::path& outfile,
@@ -245,7 +251,7 @@ int main(int argc, char** argv) {
       throw std::runtime_error("unknown mode: " + mr_mode);
     }
   } catch (const std::exception& e) {
-    std::cerr << "mapreduce failed" << std::endl << e.what() << std::endl;
+    std::cerr << mr_mode << " failed" << std::endl << e.what() << std::endl;
     return 1;
   }
   return 0;

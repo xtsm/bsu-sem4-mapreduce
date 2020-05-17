@@ -9,7 +9,7 @@ cd ../
 
 while [ 1 = 1 ]
 do
-  cat nouns.txt | shuf | head -10 | sed "s/\(.*\)/https:\/\/en.wikipedia.org\/wiki\/\1\t/" > urls.txt
+  cat nouns.txt | shuf | head -50 | sed "s/\(.*\)/https:\/\/en.wikipedia.org\/wiki\/\1\t/" > urls.txt
   cat words.txt | shuf | head -30 | sed "s/\(.*\)/\1\t/" > wordfilter.txt
   echo -n "running MR... "
   ./mr.sh
