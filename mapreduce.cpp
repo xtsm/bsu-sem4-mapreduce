@@ -22,7 +22,8 @@ struct ExtSortElement {
   }
 };
 
-// Reads `infile` and splits it into `outdir` with size limit of `size` per chunk.
+// Reads `infile` and splits it into `outdir` with size limit of `size`
+// per chunk.
 // Returns the number of resulting chunks.
 size_t SplitBySize(
     const std::filesystem::path& infile,
@@ -77,7 +78,8 @@ void ExternalSortByKey(
   TsvKeyValue kv;
 
   // step 1: split
-  size_t chunk_count = SplitBySize(infile, chunks_dir.GetPath(), chunk_size_limit);
+  size_t chunk_count = SplitBySize(infile, chunks_dir.GetPath(),
+      chunk_size_limit);
   for (size_t chunk_num = 0; chunk_num < chunk_count; ++chunk_num) {
     std::vector<TsvKeyValue> entries;
     auto chunk_path = chunks_dir.GetPath() / std::to_string(chunk_num);
@@ -198,7 +200,8 @@ void DoMap(const std::filesystem::path& infile,
   size_t chunk_size_limit = 64 << 20;
   TmpDir workdir("mr_tmp");
   TmpDir input_chunks(workdir.GetPath() / "input_chunks");
-  size_t key_count = SplitBySize(infile, input_chunks.GetPath(), chunk_size_limit);
+  size_t key_count = SplitBySize(infile, input_chunks.GetPath(),
+      chunk_size_limit);
   TmpDir output_chunks(workdir.GetPath() / "output_chunks");
   RunForAllChunks(exec,
       input_chunks.GetPath(),
