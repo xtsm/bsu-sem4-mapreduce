@@ -239,7 +239,8 @@ void DoReduce(const std::filesystem::path& infile,
 }
 
 void PrintUsageAndExit(const char* program_name) {
-  std::cerr << "Usage: " << program_name << " <map|reduce> <exec> <input> <output>"
+  std::cerr << "Usage: " << program_name
+      << " <map|reduce> <exec> <input> <output>"
       << " [-p COUNT] [-s SIZE]" << std::endl
       << "  -p COUNT   use at most COUNT parallel processes" << std::endl
       << "  -s SIZE    split input into blocks of SIZE bytes" << std::endl;
